@@ -64,28 +64,32 @@ int main()
 			if(!strncmp(command, "ls", 2))
 			{
 				printf("LISTAR CONTEUDO:\n");
-				
+				memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
 				while(1)
 				{
 					
 					recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
 
 					if (!strncmp(mensagemrecebida, "fim",3))
-			             		break;									
+			       		break;									
 					printf("%s\n", mensagemrecebida);
 										
 				}
 			}
 
-			if(!strncmp(command, "head", 4))
+			if(!strncmp(command, "cat", 3))
 			{
+				printf("LER ARQUIVO:\n");
+				memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
 				while(1)
 				{
+					
 					recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
 
 					if (!strncmp(mensagemrecebida, "fim",3))
-			             		break;									
+			       		break;									
 					printf("%s\n", mensagemrecebida);
+										
 				}
 			}
 
@@ -93,7 +97,7 @@ int main()
 			{
 				memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
 				recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
-				printf("CAMINHO PARA DIRETORIO ATUAL: "); fflush(stdout);
+				printf("DIRETORIO ATUAL: "); fflush(stdout);
 				printf("%s\n", mensagemrecebida);
 			}
 

@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #define TAM_MSG 1024
-int variavel;
+
 void *t_connection();
 
 pthread_mutex_t mutex;
@@ -56,8 +56,6 @@ void *t_connection(int socketCliente, int socketServidor)
 	char *sendOut = NULL;
 	size_t len = 0;
 
-	char *path;
-	
 	while(1)
 	{
 		if(socketCliente  ==  -1)
@@ -134,16 +132,17 @@ void *t_connection(int socketCliente, int socketServidor)
 				{
 					printf("LER ARQUIVO\n");
 
-					system(mensagemrecebida);
+					char *buff;	
 
-					system("ls > output.txt");
-					output = fopen("output.txt", "r");
+					strtok_r(mensagemrecebida, " ", &buff);
+					buff[strlen(buff)-1] = '\0';
+					printf("%s", buff);
+					output = fopen(buff, "r");
 					
 					while(keepreading = getline(&sendOut, &len, output)!= -1)
 					{
-						printf("%s\n", sendOut);
+						//printf("%s\n", sendOut);
 						send(socketCliente, sendOut, TAM_MSG, 0);
-						//sleep(1);
 					}
 
 					memset(&mensagemenviar, '\0', sizeof(mensagemenviar));
@@ -153,38 +152,32 @@ void *t_connection(int socketCliente, int socketServidor)
 					free(sendOut);
 				}
 
+
 				if (!strncmp(mensagemrecebida, "cd", 2))
 				{
 					printf("ABRIR PASTA\n");
 					
-					char *temp, *buff;	
+					char *buff;	
+
 					strtok_r(mensagemrecebida, " ", &buff);
-					system("pwd > output.txt");
-					output = fopen("output.txt", "r");
-					sendOut = (char *)malloc(TAM_MSG+1);
-					getline(&sendOut, &len, output);
-					sprintf(temp, "%s/%s", sendOut, buff);
-					chdir(temp);
-					perror("erro:");
-					send(socketCliente, temp, TAM_MSG, 0);
-					
-					fclose(output);
-					free(sendOut);
-					free(temp);
+					buff[strlen(buff)-1] = '\0';
+					chdir(buff);
+					send(socketCliente, buff, TAM_MSG, 0);
+					free(buff);
 				}
 
+				
 				if (!strncmp(mensagemrecebida, "ls", 2))
 				{
 					printf("LISTAR CONTEUDO\n");
 				
-					system("ls > output.txt");
-					output = fopen("output.txt", "r");
+					system("ls > .output.txt");
+					output = fopen(".output.txt", "r");
 					
 					while(keepreading = getline(&sendOut, &len, output)!= -1)
 					{
-						printf("%s\n", sendOut);
+						//printf("%s\n", sendOut);
 						send(socketCliente, sendOut, TAM_MSG, 0);
-						//sleep(1);
 					}
 
 					memset(&mensagemenviar, '\0', sizeof(mensagemenviar));
