@@ -1,0 +1,199 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+
+#define TAM_MSG 1024
+
+void *t_connection();
+
+pthread_mutex_t mutex;
+
+char comando[TAM_MSG];
+
+int main()
+{
+	pthread_mutex_init(&mutex, NULL);
+
+	//criar o socket do servidor
+	int socketServidor;
+	socketServidor = socket (AF_INET, SOCK_STREAM, 0);
+
+	//especificação do endereço do socket 
+	struct sockaddr_in endereco_servidor;
+	endereco_servidor.sin_family = AF_INET;
+	endereco_servidor.sin_port = htons(9002);
+	endereco_servidor.sin_addr.s_addr = INADDR_ANY;
+
+	//associar o socket com endereço e porta
+	bind(socketServidor, (struct sockaddr*)&endereco_servidor, sizeof(endereco_servidor));
+
+	listen(socketServidor, 10);
+
+	while(1)
+	{
+		int socketCliente = 0;
+		pthread_t connection;
+		socketCliente = accept(socketServidor, NULL, NULL);
+		pthread_create(&connection, NULL, t_connection(socketCliente, socketServidor), NULL);		
+	}
+	return 0;
+}
+
+void *t_connection(int socketCliente, int socketServidor)
+{
+	int connect = 0, keepreading;
+
+	FILE *output;
+
+	char mensagemenviar[TAM_MSG], mensagemrecebida[TAM_MSG], confirm[1];
+	memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
+
+	char *sendOut = NULL;
+	size_t len = 0;
+
+	char *path;
+	
+	while(1)
+	{
+		if(socketCliente  ==  -1)
+			{
+				printf("ERRO DE CONEXÃO\n");
+			}else
+			if(socketCliente > 0)
+			{	
+				//envia o id do socket do Servidor ao cliente
+				if (connect == 0)
+				{
+					sprintf(mensagemenviar, "%d", socketServidor);
+					send(socketCliente, mensagemenviar , sizeof(mensagemenviar), 0);
+					connect = 1;
+				}
+
+				//recebe comando do cliente
+				if (recv(socketCliente, &mensagemrecebida, TAM_MSG, 0)<0)
+					printf("ERRO AO RECEBER MENSAGEM\n");
+
+				//imprime o comando no terminal
+				//printf("%s\n", mensagemrecebida);
+
+				if (!strncmp(mensagemrecebida, "rm -rf", 6))
+				{
+					printf("DELETAR PASTA\n");
+
+					system(mensagemrecebida);
+				}else
+				{
+					if (!strncmp(mensagemrecebida, "rm", 2))
+					{
+						printf("DELETAR ARQUIVO\n");
+
+						system(mensagemrecebida);
+					}
+				}
+
+				if (!strncmp(mensagemrecebida, "mkdir", 5))
+				{
+					printf("CRIAR PASTA\n");
+
+					pthread_mutex_lock(&mutex);
+						system(mensagemrecebida);
+					pthread_mutex_unlock(&mutex);
+				}
+
+				if (!strncmp(mensagemrecebida, "touch", 5))
+				{
+					printf("CRIAR ARQUIVO\n");
+
+					pthread_mutex_lock(&mutex);
+						system(mensagemrecebida);
+					pthread_mutex_unlock(&mutex);
+				}
+
+				if (!strncmp(mensagemrecebida, "close", 5))
+				{
+					printf("ENCERRAR CONEXAO\n");
+					shutdown(socketCliente, 2);
+					pthread_cancel(pthread_self());
+				}
+
+				if (!strncmp(mensagemrecebida, "echo", 4))
+				{
+					printf("ESCREVER\n");
+
+					pthread_mutex_lock(&mutex);
+						system(mensagemrecebida);
+					pthread_mutex_unlock(&mutex);
+				}
+
+				if (!strncmp(mensagemrecebida, "cat", 3))
+				{
+					printf("LER ARQUIVO\n");
+
+					system(mensagemrecebida);
+
+					system("ls > output.txt");
+					output = fopen("output.txt", "r");
+					
+					while(keepreading = getline(&sendOut, &len, output)!= -1)
+					{
+						printf("%s\n", sendOut);
+						send(socketCliente, sendOut, TAM_MSG, 0);
+						//sleep(1);
+					}
+
+					memset(&mensagemenviar, '\0', sizeof(mensagemenviar));
+					strncpy(mensagemenviar, "fim", 3);
+					send(socketCliente, mensagemenviar , sizeof(mensagemenviar), 0);
+					fclose(output);					
+					free(sendOut);
+				}
+
+				if (!strncmp(mensagemrecebida, "cd", 2))
+				{
+					printf("ABRIR PASTA\n");
+					
+					char *temp, *buff;	
+					strtok_r(mensagemrecebida, " ", &buff);
+					system("pwd > output.txt");
+					output = fopen("output.txt", "r");
+					sendOut = (char *)malloc(TAM_MSG+1);
+					getline(&sendOut, &len, output);
+					sprintf(temp, "%s/%s", sendOut, buff);
+					chdir(temp);
+					perror("erro:");
+					send(socketCliente, temp, TAM_MSG, 0);
+					
+					fclose(output);
+					free(sendOut);
+					free(temp);
+				}
+
+				if (!strncmp(mensagemrecebida, "ls", 2))
+				{
+					printf("LISTAR CONTEUDO\n");
+				
+					system("ls > output.txt");
+					output = fopen("output.txt", "r");
+					
+					while(keepreading = getline(&sendOut, &len, output)!= -1)
+					{
+						printf("%s\n", sendOut);
+						send(socketCliente, sendOut, TAM_MSG, 0);
+						//sleep(1);
+					}
+
+					memset(&mensagemenviar, '\0', sizeof(mensagemenviar));
+					strncpy(mensagemenviar, "fim", 3);
+					send(socketCliente, mensagemenviar , sizeof(mensagemenviar), 0);
+					fclose(output);					
+					free(sendOut);
+				}			
+
+			}
+	}
+}
