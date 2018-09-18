@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #define TAM_MSG 1024
-
+int variavel;
 void *t_connection();
 
 pthread_mutex_t mutex;
