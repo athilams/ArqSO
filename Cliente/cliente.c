@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #define TAM_MSG 1024
+#define PORT 5006
 
 int main()
 {
@@ -22,7 +23,7 @@ int main()
 	//especificação do endereço do socket
 	struct sockaddr_in endereco_servidor;
 	endereco_servidor.sin_family = AF_INET;
-	endereco_servidor.sin_port = htons(9002);
+	endereco_servidor.sin_port = htons(PORT);
 	endereco_servidor.sin_addr.s_addr = INADDR_ANY;
 
 
@@ -41,7 +42,7 @@ int main()
 		{
 			recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
 			idServidor = atoi(mensagemrecebida);
-			printf("ID DO SERVIDOR: %d\n", idServidor);
+			//printf("ID DO SERVIDOR: %d\n", idServidor);
 		}
 		while(1)
 		{

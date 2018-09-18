@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #define TAM_MSG 1024
+#define PORT 5006
 
 void *t_connection();
 
@@ -15,18 +16,22 @@ pthread_mutex_t mutex;
 
 char comando[TAM_MSG];
 
+int i = 0;
+
 int main()
 {
 	pthread_mutex_init(&mutex, NULL);
 
 	//criar o socket do servidor
-	int socketServidor;
+	int socketServidor, socketCliente;
 	socketServidor = socket (AF_INET, SOCK_STREAM, 0);
+
+	pthread_t connection;
 
 	//especificação do endereço do socket 
 	struct sockaddr_in endereco_servidor;
 	endereco_servidor.sin_family = AF_INET;
-	endereco_servidor.sin_port = htons(9002);
+	endereco_servidor.sin_port = htons(PORT);
 	endereco_servidor.sin_addr.s_addr = INADDR_ANY;
 
 	//associar o socket com endereço e porta
@@ -34,12 +39,18 @@ int main()
 
 	listen(socketServidor, 10);
 
+	printf("SERVIDOR INICIADO NA PORTA %d\nAGUARDANDO CONEXAO...\n", PORT);
+
 	while(1)
 	{
-		int socketCliente = 0;
-		pthread_t connection;
 		socketCliente = accept(socketServidor, NULL, NULL);
-		pthread_create(&connection, NULL, t_connection(socketCliente, socketServidor), NULL);		
+		if (socketCliente >=0)
+		{
+			printf("CLIENTE CONECTADO! ID: %d\n", socketCliente);
+			pthread_create(&connection, NULL, t_connection(socketCliente, socketServidor), NULL);				
+		}else
+			printf("ERRO AO CRIAR SOCKET\n");
+			
 	}
 	return 0;
 }
@@ -64,6 +75,7 @@ void *t_connection(int socketCliente, int socketServidor)
 			}else
 			if(socketCliente > 0)
 			{	
+				
 				//envia o id do socket do Servidor ao cliente
 				if (connect == 0)
 				{
