@@ -14,7 +14,6 @@ int main()
 {
 	char mensagemrecebida[TAM_MSG];
 	char command[TAM_MSG];
-	char confirm[1];
 
 	//criar o socket
 	int socketCliente;
@@ -29,21 +28,12 @@ int main()
 
 	//conecta o socket com o socket do servidor
 	int success = connect(socketCliente, (struct sockaddr*)&endereco_servidor, sizeof(endereco_servidor));
-	int connect = 0;
-	int idServidor;
+	
 	//verifica se a conexao com o servidor foi bem sucedida
 	if(success < 0)
 		printf("ERRO AO CONECTAR AO SERVIDOR!\n");
 	else
 	{
-		printf("CONEXAO BEM SUCEDIDA!\n");
-		//se for o inicio da conexao, recebe o id do servidor 
-		if (connect == 0)
-		{
-			recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
-			idServidor = atoi(mensagemrecebida);
-			//printf("ID DO SERVIDOR: %d\n", idServidor);
-		}
 		while(1)
 		{
 			//envia comando ao servidor
@@ -52,12 +42,12 @@ int main()
 			memset(&command, '\0', sizeof(command));
 			fgets(command, TAM_MSG, stdin);
 
-			send(idServidor, command, sizeof(command), 0);
+			send(socketCliente, command, sizeof(command), 0);
 
 			//sai do loop e encerra o socket
 			if (!strncmp(command, "close", 5))
 			{
-				send(idServidor, command, sizeof(command), 0);
+				send(socketCliente, command, sizeof(command), 0);
 				shutdown(socketCliente, 2);
 				return 0;
 			}

@@ -10,13 +10,13 @@
 #define TAM_MSG 1024
 #define PORT 5006
 
-void *t_connection();
+void *t_connection(void *arg);
 
 pthread_mutex_t mutex;
 
 char comando[TAM_MSG];
 
-int i = 0;
+int i = 0; 
 
 int main()
 {
@@ -26,8 +26,9 @@ int main()
 	int socketServidor, socketCliente;
 	socketServidor = socket (AF_INET, SOCK_STREAM, 0);
 
-	pthread_t connection;
-
+	socklen_t addr_size;
+	struct sockaddr_storage serverStorage;
+	addr_size = sizeof serverStorage;
 	//especificação do endereço do socket 
 	struct sockaddr_in endereco_servidor;
 	endereco_servidor.sin_family = AF_INET;
@@ -41,13 +42,19 @@ int main()
 
 	printf("SERVIDOR INICIADO NA PORTA %d\nAGUARDANDO CONEXAO...\n", PORT);
 
+	pthread_t connection;
+	int i = 0;
+
 	while(1)
 	{
-		socketCliente = accept(socketServidor, NULL, NULL);
+		
+		socketCliente = accept(socketServidor, (struct sockaddr*)&serverStorage , &addr_size);
 		if (socketCliente >=0)
 		{
+			
 			printf("CLIENTE CONECTADO! ID: %d\n", socketCliente);
-			pthread_create(&connection, NULL, t_connection(socketCliente, socketServidor), NULL);				
+			pthread_create(&connection, NULL, t_connection, &socketCliente);	
+			//pthread_join(connection, NULL);			
 		}else
 			printf("ERRO AO CRIAR SOCKET\n");
 			
@@ -55,9 +62,10 @@ int main()
 	return 0;
 }
 
-void *t_connection(int socketCliente, int socketServidor)
+void *t_connection(void *arg)
 {
-	int connect = 0, keepreading;
+	int keepreading;
+	int socketCliente = *((int*)arg);
 
 	FILE *output;
 
@@ -76,20 +84,9 @@ void *t_connection(int socketCliente, int socketServidor)
 			if(socketCliente > 0)
 			{	
 				
-				//envia o id do socket do Servidor ao cliente
-				if (connect == 0)
-				{
-					sprintf(mensagemenviar, "%d", socketServidor);
-					send(socketCliente, mensagemenviar , sizeof(mensagemenviar), 0);
-					connect = 1;
-				}
-
 				//recebe comando do cliente
 				if (recv(socketCliente, &mensagemrecebida, TAM_MSG, 0)<0)
 					printf("ERRO AO RECEBER MENSAGEM\n");
-
-				//imprime o comando no terminal
-				//printf("%s\n", mensagemrecebida);
 
 				if (!strncmp(mensagemrecebida, "rm -rf", 6))
 				{
@@ -169,13 +166,13 @@ void *t_connection(int socketCliente, int socketServidor)
 				{
 					printf("ABRIR PASTA\n");
 					
-					char *buff;	
-
+					char *buff;
 					strtok_r(mensagemrecebida, " ", &buff);
 					buff[strlen(buff)-1] = '\0';
+					printf("%s", buff);
 					chdir(buff);
 					send(socketCliente, buff, TAM_MSG, 0);
-					free(buff);
+					
 				}
 
 				
@@ -188,7 +185,6 @@ void *t_connection(int socketCliente, int socketServidor)
 					
 					while(keepreading = getline(&sendOut, &len, output)!= -1)
 					{
-						//printf("%s\n", sendOut);
 						send(socketCliente, sendOut, TAM_MSG, 0);
 					}
 
