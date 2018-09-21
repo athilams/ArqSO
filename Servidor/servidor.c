@@ -23,7 +23,7 @@ int main()
 	pthread_mutex_init(&mutex, NULL);
 
 	//criar o socket do servidor
-	int socketServidor, socketCliente;
+	int socketServidor;
 	socketServidor = socket (AF_INET, SOCK_STREAM, 0);
 
 	socklen_t addr_size;
@@ -42,12 +42,12 @@ int main()
 
 	printf("SERVIDOR INICIADO NA PORTA %d\nAGUARDANDO CONEXAO...\n", PORT);
 
-	pthread_t connection;
+	pthread_t connection[2];
 	int i = 0;
 
 	while(1)
 	{
-		
+		int socketCliente;
 		socketCliente = accept(socketServidor, (struct sockaddr*)&serverStorage , &addr_size);
 		if (socketCliente >=0)
 		{
@@ -68,7 +68,7 @@ void *t_connection(void *arg)
 	int socketCliente = *((int*)arg);
 
 	FILE *output;
-
+	
 	char mensagemenviar[TAM_MSG], mensagemrecebida[TAM_MSG], confirm[1];
 	memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
 
