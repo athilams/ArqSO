@@ -88,6 +88,17 @@ void *t_connection(void *arg)
 				if (recv(socketCliente, &mensagemrecebida, TAM_MSG, 0)<0)
 					printf("ERRO AO RECEBER MENSAGEM\n");
 
+				if (!strncmp(mensagemrecebida, "shutdown", 8))
+				{
+					printf("SERVIDOR FINALIZANDO EM 3...\n");
+					sleep(1);
+					printf("                        2...\n");
+					sleep(1);
+					printf("                        1...\n");
+					sleep(1);
+					exit(0);
+				}
+
 				if (!strncmp(mensagemrecebida, "rm -rf", 6))
 				{
 					printf("DELETAR PASTA\n");
@@ -162,18 +173,18 @@ void *t_connection(void *arg)
 				}
 
 
-				if (!strncmp(mensagemrecebida, "cd", 2))
-				{
-					printf("ABRIR PASTA\n");
+				//if (!strncmp(mensagemrecebida, "cd", 2))
+				//{
+				//	printf("ABRIR PASTA\n");
+				//	
+				//	char *buff;
+				//	strtok_r(mensagemrecebida, " ", &buff);
+				//	buff[strlen(buff)-1] = '\0';
+				//	printf("%s", buff);
+				//	chdir(buff);
+				//	send(socketCliente, buff, TAM_MSG, 0);
 					
-					char *buff;
-					strtok_r(mensagemrecebida, " ", &buff);
-					buff[strlen(buff)-1] = '\0';
-					printf("%s", buff);
-					chdir(buff);
-					send(socketCliente, buff, TAM_MSG, 0);
-					
-				}
+				//}
 
 				
 				if (!strncmp(mensagemrecebida, "ls", 2))

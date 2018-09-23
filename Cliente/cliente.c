@@ -34,6 +34,10 @@ int main()
 		printf("ERRO AO CONECTAR AO SERVIDOR!\n");
 	else
 	{
+		printf("CONEXAO BEM SUCEDIDA!\n");
+		printf("close -> encerra conexao com o servidor\n");
+		printf("shutdown -> desliga o servidor\n");
+		
 		while(1)
 		{
 			//envia comando ao servidor
@@ -45,7 +49,7 @@ int main()
 			send(socketCliente, command, sizeof(command), 0);
 
 			//sai do loop e encerra o socket
-			if (!strncmp(command, "close", 5))
+			if (!strncmp(command, "close", 5) || !strncmp(command, "shutdown", 8))
 			{
 				send(socketCliente, command, sizeof(command), 0);
 				shutdown(socketCliente, 2);
@@ -84,13 +88,13 @@ int main()
 				}
 			}
 
-				if(!strncmp(command, "cd", 2))
-			{
-				memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
-				recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
-				printf("DIRETORIO ATUAL: "); fflush(stdout);
-				printf("%s\n", mensagemrecebida);
-			}
+			//if(!strncmp(command, "cd", 2))
+			//{
+			//	memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
+			//	recv(socketCliente, &mensagemrecebida, sizeof(mensagemrecebida), 0);
+			//	printf("DIRETORIO ATUAL: "); fflush(stdout);
+			//	printf("%s\n", mensagemrecebida);
+			//}
 
 		}
 
