@@ -42,7 +42,7 @@ int main()
 
 	printf("SERVIDOR INICIADO NA PORTA %d\nAGUARDANDO CONEXAO...\n", PORT);
 
-	pthread_t connection[2];
+	pthread_t connection;
 	int i = 0;
 
 	while(1)
@@ -64,6 +64,7 @@ int main()
 
 void *t_connection(void *arg)
 {
+	
 	int keepreading;
 	int socketCliente = *((int*)arg);
 
@@ -103,14 +104,18 @@ void *t_connection(void *arg)
 				{
 					printf("DELETAR PASTA\n");
 
+					pthread_mutex_lock(&mutex);
 					system(mensagemrecebida);
+					pthread_mutex_unlock(&mutex);
 				}else
 				{
 					if (!strncmp(mensagemrecebida, "rm", 2))
 					{
 						printf("DELETAR ARQUIVO\n");
-
+						
+						pthread_mutex_lock(&mutex);
 						system(mensagemrecebida);
+						pthread_mutex_unlock(&mutex);
 					}
 				}
 
