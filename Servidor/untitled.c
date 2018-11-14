@@ -134,20 +134,21 @@ long int fs_r_size // tamanho da região livre em Bytes
 		int inode_list[max_i];
 		memset(inode_list, 0, sizeof(inode_list));
 		
+		int name_list[qte_bloco];
+		memset(name_list, 0, sizeof(name_list));
+
 		int m=0;
 		while (inode_list[m] != 0)
 		{
 			m++;
-		}
-
-		int name_list[qte_bloco];
-		memset(name_list, 0, sizeof(name_list));
+		}		
 
 		int n=0;
 		while (name_list[n] != 0)
 		{
 			n++;
 		}
+
 
 		inode_list[m] = 1;
 
@@ -159,6 +160,8 @@ long int fs_r_size // tamanho da região livre em Bytes
   		inodes.ind = 0;
   		inodes.indirect_pointer = NULL;
 
+  		pthread_mutex_lock(&mutex);
+  		fopen(FS, "r+b");
   		fseek(FS, i_start + m * sizeof(inode), SEEK_SET);
 		fwrite(&inodes.inode, sizeof(int), 1, FS);
 		fwrite(&inodes.size, sizeof(int), 1, FS);
@@ -175,7 +178,7 @@ long int fs_r_size // tamanho da região livre em Bytes
 		fwrite(&ffile.inode, sizeof(int), 1, FS);
 
 		fclose(FS);
-
+		pthread_mutex_unlock(&mutex);
 
 		//inode *inode_list = malloc (sizeof(inode) + qte_bloco/qte_bloco_i * tam_bloco);
 
