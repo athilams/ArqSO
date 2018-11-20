@@ -16,7 +16,7 @@ typedef struct
 	int inode;
 
 }filenames;
-
+// colocar nome no proprio inode
 typedef struct
 {	
 	char nome[50];
@@ -27,13 +27,15 @@ typedef struct
 
 typedef struct inode
 {
-	int inode; // numero do inode
-	int size; // tamanho em blocos do arquivo
-	char creation[26]; // armazena a data da criação
-	char modification[26]; // armazena a data de modificação
-	int ind; // este inteiro indica qual "nível" de ponteiro indireto.
+	int inode; //4 // numero do inode
+	int inuse; // 4 // 'bit' pra identificar se esta em uso 
+	int size; // 4// tamanho em blocos do arquivo
+	char creation[26]; //26 // armazena a data da criação
+	char modification[26]; //26 // armazena a data de modificação
+	int ind; // 4 //  este inteiro indica qual "nível" de ponteiro indireto.
 	struct inode *indirect_pointer; // Se ind = 0, aponta para NULL. Se maior que 0, aponta para o ponteiro indireto;
-	long int block_pointer[]; // vetor para armazenar posição dos blocos
+	long int block_pointer[3]; //vetor para armazenar posição dos blocos
+
 
 }inode;
 
@@ -68,9 +70,9 @@ long int fs_r_size // tamanho da região livre em Bytes
 	else
 	{
 		printf("Sistema de Arquivos criado com sucesso!\n");
-		printf("Tamanho de blocos (em KB): ");
+		printf("Tamanho de blocos (em Bytes): ");
 		fscanf(stdin, "%d", &tam_bloco);
-		tam_bloco = tam_bloco * K;
+		tam_bloco = tam_bloco; // * K;
 		printf("Quantidade de blocos a serem criados: ");
 		fscanf(stdin, "%d", &qte_bloco);
 
@@ -80,7 +82,7 @@ long int fs_r_size // tamanho da região livre em Bytes
 			printf("ERRO AO ALOCAR ESPAÇO!");
 			exit(1);
 		}
-
+		sleep(1);
 		fseek(FS, 0, SEEK_END);
 		fs_r_size =  ftell(FS);
 		printf("Bytes alocados: %li Bytes totais: %li", fs_r_size, ftell(FS));
@@ -96,7 +98,7 @@ long int fs_r_size // tamanho da região livre em Bytes
 			printf("ERRO AO ALOCAR ESPAÇO!");
 			exit(1);
 		}
-
+		sleep(1);
 		fseek(FS, 0, SEEK_END);
 		i_size = ftell(FS) - i_start;
 		printf("Bytes alocados: %li Bytes totais: %li\n", i_size, ftell(FS));
@@ -107,7 +109,7 @@ long int fs_r_size // tamanho da região livre em Bytes
 			printf("ERRO AO ALOCAR ESPAÇO!");
 			exit(1);
 		}
-
+		sleep(1);
 		n_start = ftell(FS) + 1;
 		fseek(FS, 0, SEEK_END);
 		n_size = ftell(FS) - n_start;
@@ -120,13 +122,15 @@ long int fs_r_size // tamanho da região livre em Bytes
 			printf("ERRO AO ALOCAR ESPAÇO!");
 			exit(1);
 		}
-
+		sleep(1);
 		d_start = ftell(FS) + 1;
 		fseek(FS, 0, SEEK_END);
 		d_size = ftell(FS) - d_start;
 		printf("Bytes alocados: %li Bytes totais: %li\n", d_size, ftell(FS));
 
 		printf("Criando índice ...");
+
+		fclose(FS);
 
 		int blocos_livres[qte_bloco];
 		memset(blocos_livres, 0, sizeof(blocos_livres));
@@ -149,6 +153,12 @@ long int fs_r_size // tamanho da região livre em Bytes
 			n++;
 		}
 
+		int o=0;
+		while (blocos_livres[o] != 0)
+		{
+			o++;
+		}
+
 
 		inode_list[m] = 1;
 
@@ -160,27 +170,37 @@ long int fs_r_size // tamanho da região livre em Bytes
   		inodes.ind = 0;
   		inodes.indirect_pointer = NULL;
 
-  		pthread_mutex_lock(&mutex);
-  		fopen(FS, "r+b");
+  		printf("\nTeste pra criar arquivo\n");
+
+  		char crfile[50];
+  		fread(crfile, sizeof(char), 50, stdin);
+		  		
+  		strcpy(ffile.nome, crfile);
+		ffile.inode = m+1;
+  		
+  		FS = fopen("filesystem.bin", "r+b");
+
   		fseek(FS, i_start + m * sizeof(inode), SEEK_SET);
 		fwrite(&inodes.inode, sizeof(int), 1, FS);
 		fwrite(&inodes.size, sizeof(int), 1, FS);
 		fwrite(inodes.creation, sizeof(char), 26, FS);
 		fwrite(inodes.modification, sizeof(char), 26, FS);
 		fwrite(&inodes.ind, sizeof(int), 1, FS);
-		fwrite(inodes.indirect_pointer, sizeof(void*), 1, FS);
+		// fwrite(inodes.indirect_pointer, sizeof(void*), 1, FS);
 		
-  		strncpy(ffile.nome, mensagemrecebida, 50);
-		ffile.inode = m+1;
-
-		fseek(FS, n_start + n * sizeof(filenames), SEEK_SET);
+  		fseek(FS, n_start + n * sizeof(filenames), SEEK_SET);
 		fwrite(ffile.nome, sizeof(char), 50, FS);
 		fwrite(&ffile.inode, sizeof(int), 1, FS);
 
+		printf("Conteudo do arquivo: ");
+		char buffer[tam_bloco];
+		fread(buffer, sizeof(char), tam_bloco, stdin);
+		fseek(FS, 0 + o * tam_bloco, SEEK_SET);
+		inodes.block_pointer[0] = o;
+		fwrite(buffer, sizeof(char), tam_bloco, FS);
+		fwrite(&inodes.block_pointer[0], sizeof(int), 1, FS);
+		fwrite(&inodes.size, sizeof(int), 1, FS );
 		fclose(FS);
-		pthread_mutex_unlock(&mutex);
-
-		//inode *inode_list = malloc (sizeof(inode) + qte_bloco/qte_bloco_i * tam_bloco);
 
 	}
    

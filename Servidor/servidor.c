@@ -142,19 +142,17 @@ long int fs_r_size // tamanho da região livre em Bytes
 
 		printf("Criando índice ...");
 
-		void *ptr[3];
-
 		int blocos_livres[qte_bloco];
 		memset(blocos_livres, 0, sizeof(blocos_livres));
-		ptr[0] = (void*) &blocos_livres[0];
+		ptr[1] = &blocos_livres[0];
 
 		int inode_list[max_i];
 		memset(inode_list, 0, sizeof(inode_list));
-		ptr[1] = (void*) &inode_list[0];
+		ptr[2] = &inode_list[0];
 
 		int name_list[qte_bloco];
 		memset(name_list, 0, sizeof(name_list));
-		ptr[2] = (void*) &name_list[0];
+		ptr[3] = &name_list[0];
 		
 
 	// ############################### PARTE 2 FIM ###############################
@@ -189,11 +187,12 @@ long int fs_r_size // tamanho da região livre em Bytes
 	{
 		int socketCliente;
 		socketCliente = accept(socketServidor, (struct sockaddr*)&serverStorage , &addr_size);
+		ptr[0] = &socketCliente;
 		if (socketCliente >=0)
 		{
 			
 			printf("CLIENTE CONECTADO! ID: %d\n", socketCliente);
-			pthread_create(&connection, NULL, t_connection(ptr), &socketCliente);	
+			pthread_create(&connection, NULL, t_connection(), &socketCliente);	
 			//pthread_join(connection, NULL);			
 		}else
 			printf("ERRO AO CRIAR SOCKET\n");
@@ -202,11 +201,16 @@ long int fs_r_size // tamanho da região livre em Bytes
 	return 0;
 }
 
-void *t_connection(void *argv[])
+int search (int *bl, int *in, int *nl)
+{
+
+}
+
+void *t_connection(void *arg)
 {
 	
 	int keepreading;
-	int socketCliente = *((int*)arg);
+	int socketCliente = *((int*)arg[0]);
 
 	FILE *output, *FS;
 	
@@ -293,7 +297,7 @@ void *t_connection(void *argv[])
 					}
 
 
-					arg[1][m] = 1;
+					argv[2][m] = 1;
 
 					inodes.inode = m+1;
 					inodes.size = 0;
