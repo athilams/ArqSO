@@ -8,35 +8,23 @@
 #include <unistd.h>
 #include <time.h>
 
-#define K 1024
 #define TAM_MSG 1024
 #define PORT 5006
 
+#define FREESPACESIZE 1024
+#define setBit(A, k) ( A[k/32] |= (1 << (k%32)) )
+#define clearBit(A, k) ( A[(k/32)] &= ~(1 << (k%32)) )
+#define testBit(A, k) ( A[(k/32)] & (1 << (k%32)) )
+#define INODESNUMBER 32
 
 typedef struct
-{
-	char nome[50];
-	int inode;
-
-}filenames;
-
-typedef struct
-{	
-	char nome[50];
-	int inode;
-	filenames files[];
-
-}dirnames;
-
-typedef struct inode
 {
 	int inode; // numero do inode
-	int size; // tamanho em blocos do arquivo
+	char name[50]; // nome do arquivo
+	int size; // tamanho em bytes do arquivo
 	char creation[26]; // armazena a data da criação
 	char modification[26]; // armazena a data de modificação
-	int ind; // este inteiro indica qual "nível" de ponteiro indireto.
-	struct inode *indirect_pointer; // Se ind = 0, aponta para NULL. Se maior que 0, aponta para o ponteiro indireto;
-	long int block_pointer[]; // vetor para armazenar posição dos blocos
+	int block_number; // armazena posição do primeiro bloco
 
 }inode;
 
@@ -54,105 +42,7 @@ int main()
 
 	// ############################### PARTE 2 INICIO ###############################
 
-	int tam_bloco // tamanho do bloco em KB
-		, qte_bloco // numero de blocos livres
-		, qte_bloco_i // quantidade de blocos referenciados por inode
-		, max_i; // quantidade de inodes disponíveis
 	
-long int fs_r_size // tamanho da região livre em Bytes	
-		, i_start // primeiro byte da região de inodes
-		, i_size // tamanho em bytes da região de inodes 
-		, n_start // primeiro byte da região de nomes
-		, n_size // tamanho em bytes da região de nomes
-		, d_start // primeito byte da regiãõ de nomes de diretorios
-		, d_size; // tamanho em bytes da regiãõ de nomes de diretorios
-
-	filenames ffile;
-	dirnames dir;
-	inode inodes;
-
-	FILE *FS;
-
-	printf("Criando Sistema de Arquivos ...");
-	if ((FS = fopen("filesystem.bin", "wb")) == NULL)
-	{
-		printf("ERRO AO CRIAR/ABRIR SISTEMA DE ARQUIVOS");
-		exit(1);
-	}
-	else
-	{
-		printf("Sistema de Arquivos criado com sucesso!\n");
-		printf("Tamanho de blocos (em KB): ");
-		fscanf(stdin, "%d", &tam_bloco);
-		tam_bloco = tam_bloco * K;
-		printf("Quantidade de blocos a serem criados: ");
-		fscanf(stdin, "%d", &qte_bloco);
-
-		printf("Alocando região de dados ...");
-		if (truncate("filesystem.bin", tam_bloco * qte_bloco * 4))
-		{
-			printf("ERRO AO ALOCAR ESPAÇO!");
-			exit(1);
-		}
-
-		fseek(FS, 0, SEEK_END);
-		fs_r_size =  ftell(FS);
-		printf("Bytes alocados: %li Bytes totais: %li", fs_r_size, ftell(FS));
-	
-		printf("\nQuantidade máxima de inodes (divisor da quantidade de blocos): ");
-		fscanf(stdin, "%d", &max_i);
-		qte_bloco_i = qte_bloco/max_i;
-		
-		i_start = fs_r_size + 1;
-		printf("Alocando região de inode ...");
-		if (truncate("filesystem.bin", max_i * sizeof(struct inode) + qte_bloco_i * tam_bloco + ftell(FS)))
-		{
-			printf("ERRO AO ALOCAR ESPAÇO!");
-			exit(1);
-		}
-
-		fseek(FS, 0, SEEK_END);
-		i_size = ftell(FS) - i_start;
-		printf("Bytes alocados: %li Bytes totais: %li\n", i_size, ftell(FS));
-
-		printf("Alocando região de nomes (1/2) ...");
-		if (truncate("filesystem.bin", qte_bloco * sizeof(filenames) + ftell(FS)))
-		{
-			printf("ERRO AO ALOCAR ESPAÇO!");
-			exit(1);
-		}
-
-		n_start = ftell(FS) + 1;
-		fseek(FS, 0, SEEK_END);
-		n_size = ftell(FS) - n_start;
-		printf("Bytes alocados: %li Bytes totais: %li\n", n_size, ftell(FS));
-
-		int qte_dir = qte_bloco;
-		printf("Alocando região de nomes (2/2) ...");
-		if (truncate("filesystem.bin", qte_dir * sizeof(dirnames) + ftell(FS)))
-		{
-			printf("ERRO AO ALOCAR ESPAÇO!");
-			exit(1);
-		}
-
-		d_start = ftell(FS) + 1;
-		fseek(FS, 0, SEEK_END);
-		d_size = ftell(FS) - d_start;
-		printf("Bytes alocados: %li Bytes totais: %li\n", d_size, ftell(FS));
-
-		printf("Criando índice ...");
-
-		int blocos_livres[qte_bloco];
-		memset(blocos_livres, 0, sizeof(blocos_livres));
-		ptr[1] = &blocos_livres[0];
-
-		int inode_list[max_i];
-		memset(inode_list, 0, sizeof(inode_list));
-		ptr[2] = &inode_list[0];
-
-		int name_list[qte_bloco];
-		memset(name_list, 0, sizeof(name_list));
-		ptr[3] = &name_list[0];
 		
 
 	// ############################### PARTE 2 FIM ###############################
@@ -187,12 +77,11 @@ long int fs_r_size // tamanho da região livre em Bytes
 	{
 		int socketCliente;
 		socketCliente = accept(socketServidor, (struct sockaddr*)&serverStorage , &addr_size);
-		ptr[0] = &socketCliente;
 		if (socketCliente >=0)
 		{
 			
 			printf("CLIENTE CONECTADO! ID: %d\n", socketCliente);
-			pthread_create(&connection, NULL, t_connection(), &socketCliente);	
+			pthread_create(&connection, NULL, t_connection, &socketCliente);	
 			//pthread_join(connection, NULL);			
 		}else
 			printf("ERRO AO CRIAR SOCKET\n");
@@ -201,18 +90,52 @@ long int fs_r_size // tamanho da região livre em Bytes
 	return 0;
 }
 
-int search (int *bl, int *in, int *nl)
-{
-
-}
-
 void *t_connection(void *arg)
 {
-	
-	int keepreading;
-	int socketCliente = *((int*)arg[0]);
-
 	FILE *output, *FS;
+	int keepreading;
+	int socketCliente = *((int*)arg);
+	int bitMapF[FREESPACESIZE/32];
+	int bitMapI[INODESNUMBER/32];
+
+	printf("Criando Sistema de Arquivos ...\n");
+	sleep(1);
+	if ((FS = fopen("filesystem.bin", "wb")) == NULL)
+	{
+		printf("ERRO AO CRIAR/ABRIR SISTEMA DE ARQUIVOS");
+		exit(1);
+	}
+
+	if (truncate("filesystem.bin", FREESPACESIZE + INODESNUMBER * sizeof(inode) + sizeof(bitMapF) + sizeof(bitMapI)))
+	{
+			printf("ERRO AO ALOCAR ESPAÇO!");
+			exit(1);
+	}
+
+	fseek(FS, FREESPACESIZE, SEEK_SET);
+
+	for (int i = 1; i <= INODESNUMBER; i++)
+	{
+		fwrite(&i, sizeof(int), 1, FS);
+		fseek(FS, sizeof(inode)-sizeof(int), SEEK_CUR);	
+	}
+
+	for (int i = 0; i < FREESPACESIZE/32; i++)
+	{
+		bitMapF[i] = 0;
+	}	
+
+	for (int i = 0; i < INODESNUMBER/32; i++)
+	{
+		bitMapI[i] = 0;
+	}	
+
+	fseek(FS, FREESPACESIZE + INODESNUMBER * sizeof(inode), SEEK_SET);
+
+	fwrite(bitMapF, sizeof(bitMapF), 1, FS);
+	fwrite(bitMapI, sizeof(bitMapI), 1, FS);
+
+	fclose(FS);
 	
 	char mensagemenviar[TAM_MSG], mensagemrecebida[TAM_MSG], confirm[1];
 	memset(&mensagemrecebida, '\0', sizeof(mensagemrecebida));
@@ -244,10 +167,59 @@ void *t_connection(void *arg)
 					exit(0);
 				}
 
-				if (!strncmp(mensagemrecebida, "delete", 7))
+				if (!strncmp(mensagemrecebida, "delete", 6))
 				{
+					printf("DELETAR\n");
 					pthread_mutex_lock(&mutex);
-					
+						FS = fopen("filesystem.bin", "r+b");
+						fseek(FS, FREESPACESIZE + INODESNUMBER * sizeof(inode), SEEK_SET);
+
+						fread(bitMapF, sizeof(bitMapF), 1, FS);
+						fread(bitMapI, sizeof(bitMapI), 1, FS);
+
+
+						char *fil, *data, check[50];
+
+						strtok_r(mensagemrecebida, " ", &fil);
+						fil = strtok(fil, " ");						
+
+						int x;
+
+						for (x=0; x< INODESNUMBER;x++)
+						{
+							fseek(FS, FREESPACESIZE + x * sizeof(inode) + sizeof(int), SEEK_SET);
+							fread(check, sizeof(char), strlen(fil), FS);
+							if(!strcmp(check, fil))
+								break;
+						}
+
+						if(x == INODESNUMBER)
+							printf("Arquivo não encontrado!\n");
+						else
+						{
+							fseek(FS, FREESPACESIZE + sizeof(inode) * (x+1) - sizeof(int) -2 , SEEK_SET);
+							int reset, nallc = -1;
+							fread(&reset, sizeof(int), 1, FS);
+							printf("%d\n", reset);
+							for (int k = reset; k < reset+31;k++)
+							{
+								clearBit(bitMapF, k);
+							}
+
+							fseek(FS, -sizeof(int), SEEK_CUR);
+							fwrite(&nallc, sizeof(int), 1, FS);
+							char noname[50];
+							memset(noname, '\0', 50);
+							fseek(FS, FREESPACESIZE + sizeof(inode) * x + sizeof(int), SEEK_SET);
+
+							
+							clearBit(bitMapI, x);
+							fseek(FS, FREESPACESIZE + INODESNUMBER * sizeof(inode), SEEK_SET);
+
+							fwrite(bitMapF, sizeof(bitMapF), 1, FS);
+							fwrite(bitMapI, sizeof(bitMapI), 1, FS);
+						}
+						fclose(FS);
 					pthread_mutex_unlock(&mutex);
 				}
 				// else
@@ -275,57 +247,63 @@ void *t_connection(void *arg)
 				{
 					printf("CRIAR ARQUIVO\n");
 
-					char *buff;	
+					char *buff;
 
 					strtok_r(mensagemrecebida, " ", &buff);
 					buff[strlen(buff)-1] = '\0';
 
-					// pthread_mutex_lock(&mutex);
-					// 	system(mensagemrecebida);
-					// pthread_mutex_unlock(&mutex);
+					pthread_mutex_lock(&mutex);
+						
+						inode read;
+						int bitMapF[FREESPACESIZE/32];
+						int bitMapI[INODESNUMBER/32]; 
 
-					int m=0;
-					while (arg[2][m] != 0)
-					{
-						m++;
-					}		
+						FS = fopen("filesystem.bin", "r+b");
 
-					int n=0;
-					while (arg[3][n] != 0)
-					{
-						n++;
-					}
+						fseek(FS, FREESPACESIZE + sizeof(inode) * INODESNUMBER + sizeof(bitMapF), SEEK_SET);
+						fread(&bitMapI, sizeof(bitMapI), 1, FS);
 
+						memset(read.name, '\0', 50);
+						strncpy(read.name, buff, 50);
+						time_t clk = time(NULL);
+						strncpy(read.creation, ctime(&clk), 26);
+					  	strncpy(read.modification, ctime(&clk), 26);
+					  	
+						int j = 0;
+					  	while (testBit(bitMapI, j))
+					  	{
+					  		j++;
+					  	}
 
-					argv[2][m] = 1;
+					  	fseek(FS, FREESPACESIZE + sizeof(inode) * j + sizeof(int), SEEK_SET);
+					  	printf("\n%ld", ftell(FS));
+					  	printf("\nEscrevendo dados inode...");
+					 
+						read.size = 0;
+						read.block_number = -1;
 
-					inodes.inode = m+1;
-					inodes.size = 0;
-					time_t clk = time(NULL);
-			  		strncpy(inodes.creation, ctime(&clk), 26);
-			  		strncpy(inodes.modification, ctime(&clk), 26);
-			  		inodes.ind = 0;
-			  		inodes.indirect_pointer = NULL;
+						if(fwrite(read.name, 50, sizeof(char), FS) &&
+						fwrite(&read.size, 1, sizeof(int), FS) &&
+						fwrite(read.creation, 26, sizeof(char), FS) &&
+						fwrite(read.modification, 26, sizeof(char), FS) &&						
+						fwrite(&read.block_number, 1, sizeof(int), FS))
+						{
+							printf(" INODE OK!\n");
+						}
+						else					
+							printf(" ERRO AO ESCREVER DADOS INODE\n");
+								
+						setBit(bitMapI, j);
 
-			  		pthread_mutex_lock(&mutex);
-			  		FS = fopen("filesystem.bin", "r+b");
-			  		fseek(FS, i_start + m * sizeof(inode), SEEK_SET);
-					fwrite(&inodes.inode, sizeof(int), 1, FS);
-					fwrite(&inodes.size, sizeof(int), 1, FS);
-					fwrite(inodes.creation, sizeof(char), 26, FS);
-					fwrite(inodes.modification, sizeof(char), 26, FS);
-					fwrite(&inodes.ind, sizeof(int), 1, FS);
-					fwrite(inodes.indirect_pointer, sizeof(void*), 1, FS);
-					
-			  		strncpy(ffile.nome, buff, 50);
-					ffile.inode = m+1;
+						fseek(FS, FREESPACESIZE + INODESNUMBER * sizeof(inode), SEEK_SET);
+						
+						fwrite(bitMapF, sizeof(bitMapF), 1, FS);
+						fwrite(bitMapI, sizeof(bitMapI), 1, FS);
 
-					fseek(FS, n_start + n * sizeof(filenames), SEEK_SET);
-					fwrite(ffile.nome, sizeof(char), 50, FS);
-					fwrite(&ffile.inode, sizeof(int), 1, FS);
+						fclose(FS);
 
-					fclose(FS);
 					pthread_mutex_unlock(&mutex);
+					
 				}
 
 				if (!strncmp(mensagemrecebida, "close", 5))
@@ -340,33 +318,87 @@ void *t_connection(void *arg)
 					printf("ESCREVER\n");
 
 					pthread_mutex_lock(&mutex);
-						system(mensagemrecebida);
+
+					FS = fopen("filesystem.bin", "r+b");
+
+					char *fil, *data, check[50];
+
+					strtok_r(mensagemrecebida, " ", &fil);
+					fil = strtok_r(fil, " ", &data);
+					printf("%s\n%s\n",fil, data);
+
+					int x;
+
+					for (x=0; x< INODESNUMBER;x++)
+					{
+						fseek(FS, FREESPACESIZE + x * sizeof(inode) + sizeof(int), SEEK_SET);
+						fread(check, sizeof(char), strlen(fil), FS);
+						if(!strcmp(check, fil))
+							break;
+					}
+
+					if(x == INODESNUMBER)
+						printf("Arquivo não encontrado!\n");
+					else
+					{
+						int blchk;
+						int i = 0;
+						fseek(FS, FREESPACESIZE + sizeof(inode) * (x+1) - sizeof(int) -2 , SEEK_SET);
+						fread(&blchk, sizeof(int), 1, FS);
+						printf("TESTE %d\n", blchk);
+						if (blchk == -1)
+						{							
+							fseek(FS, FREESPACESIZE + sizeof(inode) * INODESNUMBER, SEEK_SET);
+							fread(&bitMapF, sizeof(bitMapF), 1, FS);
+							
+							while (testBit(bitMapF, i))
+						  	{
+						  		i++;
+						  	}
+
+						  	fseek(FS, i, SEEK_SET);
+							fwrite(data, sizeof(char), strlen(data), FS);
+
+							for (int k = i; k < i+32;k++)
+							{
+								setBit(bitMapF, k);
+							}
+
+						  	fseek(FS, FREESPACESIZE + sizeof(inode) * (x+1) - sizeof(int) -2, SEEK_SET);
+						  	fwrite(&i, sizeof(int), 1, FS);
+
+						  	
+							fseek(FS, FREESPACESIZE + sizeof(inode) * x + sizeof(int) + sizeof(char)*50, SEEK_SET);
+							int dtsz = strlen(data);
+							fwrite(&dtsz, sizeof(int), 1, FS);
+
+						}
+						else
+						{
+							i = blchk;
+							if(strlen(data)<=32)
+							{
+								fseek(FS, i, SEEK_SET);
+								fwrite(data, sizeof(char), strlen(data), FS);															
+							}
+							else
+							{
+								printf("\nNAO IMPLEMENTEI ESSA PARTE!\n");
+							}
+						}
+
+						fseek(FS, FREESPACESIZE + sizeof(inode) * INODESNUMBER, SEEK_SET);
+						fwrite(bitMapF, sizeof(bitMapF), 1, FS);
+					}
+					
+					fclose(FS);
+
 					pthread_mutex_unlock(&mutex);
 				}
 
 				if (!strncmp(mensagemrecebida, "cat", 3))
 				{
-					printf("LER ARQUIVO\n");
-
-					// char *buff;	
-
-					// strtok_r(mensagemrecebida, " ", &buff);
-					// buff[strlen(buff)-1] = '\0';
-					// printf("%s", buff);
-					// output = f(buff, "r");
-					
-					// while(keepreading = getline(&sendOut, &len, output)!= -1)
-					// {
-					// 	//printf("%s\n", sendOut);
-					// 	send(socketCliente, sendOut, TAM_MSG, 0);
-					// }
-
-					// memset(&mensagemenviar, '\0', sizeof(mensagemenviar));
-					// strncpy(mensagemenviar, "fim", 3);
-					// send(socketCliente, mensagemenviar , sizeof(mensagemenviar), 0);
-					// fclose(output);					
-					// free(sendOut);
-
+					printf("LER ARQUIVO\n");				
 				}
 
 
